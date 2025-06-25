@@ -1,19 +1,20 @@
 import { 
   users, livestock, transactions, inventory, healthRecords,
-  type User, type InsertUser,
+  type User, type InsertUser, type UpsertUser,
   type Livestock, type InsertLivestock,
   type Transaction, type InsertTransaction,
   type Inventory, type InsertInventory,
   type HealthRecord, type InsertHealthRecord
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
-  updateUserLastActive(id: number): Promise<void>;
+  updateUserLastActive(id: string): Promise<void>;
 
   // Livestock operations
   getAllLivestock(): Promise<Livestock[]>;
@@ -58,263 +59,162 @@ export interface IStorage {
   getUpcomingHealthTasks(): Promise<HealthRecord[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private livestock: Map<number, Livestock>;
-  private transactions: Map<number, Transaction>;
-  private inventory: Map<number, Inventory>;
-  private healthRecords: Map<number, HealthRecord>;
-  private currentUserId: number;
-  private currentLivestockId: number;
-  private currentTransactionId: number;
-  private currentInventoryId: number;
-  private currentHealthRecordId: number;
-
-  constructor() {
-    this.users = new Map();
-    this.livestock = new Map();
-    this.transactions = new Map();
-    this.inventory = new Map();
-    this.healthRecords = new Map();
-    this.currentUserId = 1;
-    this.currentLivestockId = 1;
-    this.currentTransactionId = 1;
-    this.currentInventoryId = 1;
-    this.currentHealthRecordId = 1;
-
-    // Initialize with sample data
-    this.initializeSampleData();
-  }
-
-  private initializeSampleData() {
-    // Sample users/partners
-    const partners = [
-      { username: "john_smith", password: "password", firstName: "John", lastName: "Smith", email: "john@ranch-partners.com", role: "admin" },
-      { username: "sarah_johnson", password: "password", firstName: "Sarah", lastName: "Johnson", email: "sarah@ranch-partners.com", role: "partner" },
-      { username: "mike_wilson", password: "password", firstName: "Mike", lastName: "Wilson", email: "mike@ranch-partners.com", role: "partner" },
-      { username: "david_brown", password: "password", firstName: "David", lastName: "Brown", email: "david@ranch-partners.com", role: "partner" }
-    ];
-
-    partners.forEach(partner => {
-      const user: User = {
-        id: this.currentUserId++,
-        ...partner,
-        profileImageUrl: null,
-        isActive: true,
-        lastActiveAt: new Date(),
-        createdAt: new Date()
-      };
-      this.users.set(user.id, user);
-    });
-
-    // Sample livestock
-    const animals = [
-      { tagId: "C-001", breed: "Angus", gender: "female", weight: "1200", healthStatus: "healthy", location: "Pasture A" },
-      { tagId: "C-002", breed: "Hereford", gender: "male", weight: "1350", healthStatus: "monitoring", location: "Pasture B" },
-      { tagId: "C-003", breed: "Charolais", gender: "female", weight: "980", healthStatus: "healthy", location: "Pasture A" }
-    ];
-
-    animals.forEach(animal => {
-      const livestock: Livestock = {
-        id: this.currentLivestockId++,
-        ...animal,
-        birthDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000 * 3), // Random age up to 3 years
-        purchasePrice: (Math.random() * 2000 + 1000).toString(),
-        purchaseDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000),
-        notes: null,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      this.livestock.set(livestock.id, livestock);
-    });
-
-    // Sample transactions
-    const transactionData = [
-      { type: "income", category: "livestock_sales", description: "Cattle Sale - Buyer ABC Corp", amount: "12500", date: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-      { type: "expense", category: "feed_supplies", description: "Feed Purchase - Ranch Supply Co", amount: "3200", date: new Date(Date.now() - 48 * 60 * 60 * 1000) },
-      { type: "expense", category: "maintenance", description: "Equipment Maintenance", amount: "850", date: new Date(Date.now() - 72 * 60 * 60 * 1000) }
-    ];
-
-    transactionData.forEach(txn => {
-      const transaction: Transaction = {
-        id: this.currentTransactionId++,
-        ...txn,
-        date: txn.date,
-        partnerId: 1,
-        livestockId: null,
-        receiptUrl: null,
-        notes: null,
-        createdAt: new Date()
-      };
-      this.transactions.set(transaction.id, transaction);
-    });
-
-    // Sample inventory
-    const inventoryData = [
-      { name: "Cattle Feed Premium", category: "feed", quantity: "1245", unit: "tons", minStockLevel: "500", costPerUnit: "250" },
-      { name: "Hay Bales", category: "feed", quantity: "850", unit: "bales", minStockLevel: "200", costPerUnit: "15" },
-      { name: "Antibiotics", category: "medicine", quantity: "25", unit: "bottles", minStockLevel: "10", costPerUnit: "45" }
-    ];
-
-    inventoryData.forEach(item => {
-      const inventory: Inventory = {
-        id: this.currentInventoryId++,
-        ...item,
-        supplier: "Ranch Supply Co",
-        lastRestocked: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
-        expiryDate: null,
-        location: "Main Storage",
-        notes: null,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
-      this.inventory.set(inventory.id, inventory);
-    });
-  }
-
+export class DatabaseStorage implements IStorage {
   // User operations
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(user => user.username === username);
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = {
-      ...insertUser,
-      id,
-      isActive: true,
-      lastActiveAt: new Date(),
-      createdAt: new Date()
-    };
-    this.users.set(id, user);
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
     return user;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    return await db.select().from(users);
   }
 
-  async updateUserLastActive(id: number): Promise<void> {
-    const user = this.users.get(id);
-    if (user) {
-      user.lastActiveAt = new Date();
-      this.users.set(id, user);
-    }
+  async updateUserLastActive(id: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ lastActiveAt: new Date() })
+      .where(eq(users.id, id));
   }
 
   // Livestock operations
   async getAllLivestock(): Promise<Livestock[]> {
-    return Array.from(this.livestock.values()).filter(animal => animal.isActive);
+    return await db.select().from(livestock).where(eq(livestock.isActive, true));
   }
 
   async getLivestock(id: number): Promise<Livestock | undefined> {
-    return this.livestock.get(id);
+    const [result] = await db.select().from(livestock).where(eq(livestock.id, id));
+    return result;
   }
 
   async getLivestockByTagId(tagId: string): Promise<Livestock | undefined> {
-    return Array.from(this.livestock.values()).find(animal => animal.tagId === tagId);
+    const [result] = await db.select().from(livestock).where(eq(livestock.tagId, tagId));
+    return result;
   }
 
   async createLivestock(insertLivestock: InsertLivestock): Promise<Livestock> {
-    const id = this.currentLivestockId++;
-    const livestock: Livestock = {
-      ...insertLivestock,
-      id,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.livestock.set(id, livestock);
-    return livestock;
+    const [result] = await db
+      .insert(livestock)
+      .values(insertLivestock)
+      .returning();
+    return result;
   }
 
   async updateLivestock(id: number, updates: Partial<InsertLivestock>): Promise<Livestock> {
-    const existing = this.livestock.get(id);
-    if (!existing) throw new Error("Livestock not found");
-    
-    const updated: Livestock = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.livestock.set(id, updated);
-    return updated;
+    const [result] = await db
+      .update(livestock)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(livestock.id, id))
+      .returning();
+    if (!result) throw new Error("Livestock not found");
+    return result;
   }
 
   async deleteLivestock(id: number): Promise<void> {
-    const existing = this.livestock.get(id);
-    if (existing) {
-      existing.isActive = false;
-      this.livestock.set(id, existing);
-    }
+    await db
+      .update(livestock)
+      .set({ isActive: false })
+      .where(eq(livestock.id, id));
   }
 
   async getLivestockStats(): Promise<{ total: number; healthy: number; monitoring: number; sick: number; }> {
-    const animals = Array.from(this.livestock.values()).filter(animal => animal.isActive);
-    return {
-      total: animals.length,
-      healthy: animals.filter(a => a.healthStatus === "healthy").length,
-      monitoring: animals.filter(a => a.healthStatus === "monitoring").length,
-      sick: animals.filter(a => a.healthStatus === "sick").length
-    };
+    const result = await db
+      .select({
+        total: sql<number>`count(*)`,
+        healthy: sql<number>`count(*) filter (where health_status = 'healthy')`,
+        monitoring: sql<number>`count(*) filter (where health_status = 'monitoring')`,
+        sick: sql<number>`count(*) filter (where health_status = 'sick')`,
+      })
+      .from(livestock)
+      .where(eq(livestock.isActive, true));
+    
+    return result[0] || { total: 0, healthy: 0, monitoring: 0, sick: 0 };
   }
 
   // Transaction operations
   async getAllTransactions(): Promise<Transaction[]> {
-    return Array.from(this.transactions.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return await db.select().from(transactions).orderBy(desc(transactions.date));
   }
 
   async getTransaction(id: number): Promise<Transaction | undefined> {
-    return this.transactions.get(id);
+    const [result] = await db.select().from(transactions).where(eq(transactions.id, id));
+    return result;
   }
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
-    const id = this.currentTransactionId++;
-    const transaction: Transaction = {
-      ...insertTransaction,
-      id,
-      createdAt: new Date()
-    };
-    this.transactions.set(id, transaction);
-    return transaction;
+    const [result] = await db
+      .insert(transactions)
+      .values(insertTransaction)
+      .returning();
+    return result;
   }
 
   async updateTransaction(id: number, updates: Partial<InsertTransaction>): Promise<Transaction> {
-    const existing = this.transactions.get(id);
-    if (!existing) throw new Error("Transaction not found");
-    
-    const updated: Transaction = { ...existing, ...updates };
-    this.transactions.set(id, updated);
-    return updated;
+    const [result] = await db
+      .update(transactions)
+      .set(updates)
+      .where(eq(transactions.id, id))
+      .returning();
+    if (!result) throw new Error("Transaction not found");
+    return result;
   }
 
   async deleteTransaction(id: number): Promise<void> {
-    this.transactions.delete(id);
+    await db.delete(transactions).where(eq(transactions.id, id));
   }
 
   async getTransactionsByDateRange(startDate: Date, endDate: Date): Promise<Transaction[]> {
-    return Array.from(this.transactions.values()).filter(txn => {
-      const txnDate = new Date(txn.date);
-      return txnDate >= startDate && txnDate <= endDate;
-    });
+    return await db
+      .select()
+      .from(transactions)
+      .where(and(gte(transactions.date, startDate), lte(transactions.date, endDate)))
+      .orderBy(desc(transactions.date));
   }
 
   async getFinancialSummary(): Promise<{ totalIncome: number; totalExpenses: number; netProfit: number; monthlyRevenue: number; }> {
-    const transactions = Array.from(this.transactions.values());
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    const monthlyTransactions = transactions.filter(txn => new Date(txn.date) >= monthStart);
+    const [incomeResult] = await db
+      .select({
+        total: sql<number>`sum(cast(amount as decimal))`
+      })
+      .from(transactions)
+      .where(eq(transactions.type, "income"));
     
-    const totalIncome = transactions.filter(t => t.type === "income").reduce((sum, t) => sum + parseFloat(t.amount), 0);
-    const totalExpenses = transactions.filter(t => t.type === "expense").reduce((sum, t) => sum + parseFloat(t.amount), 0);
-    const monthlyRevenue = monthlyTransactions.filter(t => t.type === "income").reduce((sum, t) => sum + parseFloat(t.amount), 0);
+    const [expenseResult] = await db
+      .select({
+        total: sql<number>`sum(cast(amount as decimal))`
+      })
+      .from(transactions)
+      .where(eq(transactions.type, "expense"));
     
+    const [monthlyResult] = await db
+      .select({
+        total: sql<number>`sum(cast(amount as decimal))`
+      })
+      .from(transactions)
+      .where(and(eq(transactions.type, "income"), gte(transactions.date, monthStart)));
+
+    const totalIncome = Number(incomeResult?.total || 0);
+    const totalExpenses = Number(expenseResult?.total || 0);
+    const monthlyRevenue = Number(monthlyResult?.total || 0);
+
     return {
       totalIncome,
       totalExpenses,
@@ -325,80 +225,77 @@ export class MemStorage implements IStorage {
 
   // Inventory operations
   async getAllInventory(): Promise<Inventory[]> {
-    return Array.from(this.inventory.values());
+    return await db.select().from(inventory);
   }
 
   async getInventory(id: number): Promise<Inventory | undefined> {
-    return this.inventory.get(id);
+    const [result] = await db.select().from(inventory).where(eq(inventory.id, id));
+    return result;
   }
 
   async createInventory(insertInventory: InsertInventory): Promise<Inventory> {
-    const id = this.currentInventoryId++;
-    const inventory: Inventory = {
-      ...insertInventory,
-      id,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    this.inventory.set(id, inventory);
-    return inventory;
+    const [result] = await db
+      .insert(inventory)
+      .values(insertInventory)
+      .returning();
+    return result;
   }
 
   async updateInventory(id: number, updates: Partial<InsertInventory>): Promise<Inventory> {
-    const existing = this.inventory.get(id);
-    if (!existing) throw new Error("Inventory item not found");
-    
-    const updated: Inventory = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date()
-    };
-    this.inventory.set(id, updated);
-    return updated;
+    const [result] = await db
+      .update(inventory)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(inventory.id, id))
+      .returning();
+    if (!result) throw new Error("Inventory item not found");
+    return result;
   }
 
   async deleteInventory(id: number): Promise<void> {
-    this.inventory.delete(id);
+    await db.delete(inventory).where(eq(inventory.id, id));
   }
 
   async getLowStockItems(): Promise<Inventory[]> {
-    return Array.from(this.inventory.values()).filter(item => {
-      const quantity = parseFloat(item.quantity);
-      const minStock = parseFloat(item.minStockLevel || "0");
-      return quantity <= minStock;
-    });
+    return await db
+      .select()
+      .from(inventory)
+      .where(sql`cast(quantity as decimal) <= cast(min_stock_level as decimal)`);
   }
 
   // Health record operations
   async getAllHealthRecords(): Promise<HealthRecord[]> {
-    return Array.from(this.healthRecords.values());
+    return await db.select().from(healthRecords).orderBy(desc(healthRecords.date));
   }
 
   async getHealthRecordsByLivestock(livestockId: number): Promise<HealthRecord[]> {
-    return Array.from(this.healthRecords.values()).filter(record => record.livestockId === livestockId);
+    return await db
+      .select()
+      .from(healthRecords)
+      .where(eq(healthRecords.livestockId, livestockId))
+      .orderBy(desc(healthRecords.date));
   }
 
   async createHealthRecord(insertRecord: InsertHealthRecord): Promise<HealthRecord> {
-    const id = this.currentHealthRecordId++;
-    const record: HealthRecord = {
-      ...insertRecord,
-      id,
-      createdAt: new Date()
-    };
-    this.healthRecords.set(id, record);
-    return record;
+    const [result] = await db
+      .insert(healthRecords)
+      .values(insertRecord)
+      .returning();
+    return result;
   }
 
   async getUpcomingHealthTasks(): Promise<HealthRecord[]> {
     const now = new Date();
-    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     
-    return Array.from(this.healthRecords.values()).filter(record => {
-      if (!record.nextDueDate) return false;
-      const dueDate = new Date(record.nextDueDate);
-      return dueDate >= now && dueDate <= nextWeek;
-    });
+    return await db
+      .select()
+      .from(healthRecords)
+      .where(and(
+        gte(healthRecords.nextDueDate, now),
+        lte(healthRecords.nextDueDate, oneWeekFromNow)
+      ))
+      .orderBy(healthRecords.nextDueDate);
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
