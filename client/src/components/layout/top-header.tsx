@@ -1,4 +1,5 @@
-import { Menu, Calendar } from "lucide-react";
+import { Menu, Calendar, Tractor } from "lucide-react";
+import { UserNav } from "./user-nav";
 
 interface TopHeaderProps {
   title: string;
@@ -18,19 +19,19 @@ export function TopHeader({ title }: TopHeaderProps) {
           <button className="lg:hidden mr-3 text-ranch-green">
             <Menu className="h-6 w-6" />
           </button>
-          <h2 className="text-2xl font-semibold text-gray-800">{title}</h2>
+          <div className="flex items-center space-x-2 mr-4">
+            <Tractor className="h-6 w-6 text-green-600" />
+            <span className="text-lg font-semibold text-gray-900">Ranch Manager Pro</span>
+          </div>
+          <div className="text-gray-400">|</div>
+          <h2 className="text-xl font-semibold text-gray-800 ml-4">{title}</h2>
         </div>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Calendar className="h-4 w-4" />
             <span>{currentDate}</span>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-ranch-green rounded-full flex items-center justify-center text-ranch-beige font-semibold">
-              J
-            </div>
-            <span className="text-sm font-medium text-gray-700">John Smith</span>
-          </div>
+          <UserNav />
         </div>
       </div>
     </div>

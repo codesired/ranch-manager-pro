@@ -98,11 +98,29 @@ The application follows a typical three-tier architecture with clear separation 
 - **Port Mapping**: Internal port 5000 mapped to external port 80
 - **Environment**: PostgreSQL database automatically provisioned
 
-## Changelog
-```
-Changelog:
-- June 25, 2025. Initial setup
-```
+## Recent Changes
+- **June 25, 2025**: Implemented PostgreSQL database integration replacing memory storage
+- **June 25, 2025**: Added Google/Replit authentication with role-based access control (owner, admin, partner)
+- **June 25, 2025**: Fixed scroll issues across the interface with enhanced scrollbar styling
+- **June 25, 2025**: Created landing page for unauthenticated users with feature overview
+- **June 25, 2025**: Added user navigation component with profile dropdown and logout functionality
+
+## System Architecture Updates
+### Authentication System
+- **Framework**: Replit/OpenID Connect authentication
+- **Session Management**: PostgreSQL-backed session storage with connect-pg-simple
+- **Authorization**: Role-based access control with middleware protection
+- **User Roles**: owner, admin, partner with different permission levels
+
+### Database Integration
+- **Migration**: Successfully migrated from memory storage to PostgreSQL
+- **Schema**: Implements users, sessions, livestock, transactions, inventory, and health_records tables
+- **ORM**: Drizzle ORM with proper relationships and type safety
+
+### UI/UX Improvements
+- **Scroll Enhancement**: Custom scrollbar styling and smooth scroll behavior
+- **Authentication Flow**: Landing page for logged-out users, protected routes for authenticated users
+- **User Interface**: Added user profile dropdown with role display and logout functionality
 
 ## User Preferences
 ```
