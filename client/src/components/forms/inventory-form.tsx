@@ -50,6 +50,15 @@ export function InventoryForm({ onSuccess }: InventoryFormProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: InventoryFormData) => {
+      // Clean up data for database
+      const cleanData = {
+        ...data,
+        location: data.location && data.location !== "" ? data.location : undefined,
+        notes: data.notes && data.notes !== "" ? data.notes : undefined,
+        minStockLevel: data.minStockLevel && data.minStockLevel !== "" ? data.minStockLevel : undefined,
+        costPerUnit: data.costPerUnit && data.costPerUnit !== "" ? data.costPerUnit : undefined,
+        supplier: data.supplier && data.supplier !== "" ? data.supplier : undefined,
+      };
       const payload = {
         ...data,
         lastRestocked: data.lastRestocked ? new Date(data.lastRestocked) : null,

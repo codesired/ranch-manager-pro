@@ -30,7 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/livestock/stats", async (req, res) => {
+  app.get("/api/livestock/stats", isAuthenticated, async (req, res) => {
     try {
       const stats = await storage.getLivestockStats();
       res.json(stats);
@@ -51,7 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/livestock/:id", async (req, res) => {
+  app.put("/api/livestock/:id", isAuthenticated, requireRole(['admin', 'owner', 'partner']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertLivestockSchema.partial().parse(req.body);
@@ -63,7 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/livestock/:id", async (req, res) => {
+  app.delete("/api/livestock/:id", isAuthenticated, requireRole(['admin', 'owner']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteLivestock(id);
@@ -85,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/transactions/summary", async (req, res) => {
+  app.get("/api/transactions/summary", isAuthenticated, async (req, res) => {
     try {
       const summary = await storage.getFinancialSummary();
       res.json(summary);
@@ -106,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/transactions/:id", async (req, res) => {
+  app.delete("/api/transactions/:id", isAuthenticated, requireRole(['admin', 'owner']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteTransaction(id);
@@ -128,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/inventory/low-stock", async (req, res) => {
+  app.get("/api/inventory/low-stock", isAuthenticated, async (req, res) => {
     try {
       const lowStockItems = await storage.getLowStockItems();
       res.json(lowStockItems);
@@ -162,7 +162,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Partners routes
-  app.get("/api/partners", async (req, res) => {
+  app.get("/api/partners", isAuthenticated, async (req, res) => {
     try {
       const partners = await storage.getAllUsers();
       res.json(partners);
@@ -183,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/health-records/upcoming", async (req, res) => {
+  app.get("/api/health-records/upcoming", isAuthenticated, async (req, res) => {
     try {
       const upcoming = await storage.getUpcomingHealthTasks();
       res.json(upcoming);

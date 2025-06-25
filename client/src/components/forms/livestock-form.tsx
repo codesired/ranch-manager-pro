@@ -15,10 +15,11 @@ const livestockFormSchema = insertLivestockSchema.extend({
   tagId: z.string().min(1, "Tag ID is required"),
   breed: z.string().min(1, "Breed is required"),
   gender: z.enum(["male", "female"], { required_error: "Please select a gender" }),
-  weight: z.string().optional(),
-  location: z.string().optional(),
-  purchasePrice: z.string().optional(),
-  notes: z.string().optional(),
+  weight: z.string().optional().transform(val => val === "" ? undefined : val),
+  location: z.string().optional().transform(val => val === "" ? undefined : val),
+  purchasePrice: z.string().optional().transform(val => val === "" ? undefined : val),
+  notes: z.string().optional().transform(val => val === "" ? undefined : val),
+  healthStatus: z.enum(["healthy", "monitoring", "sick"]).default("healthy"),
 });
 
 type LivestockFormData = z.infer<typeof livestockFormSchema>;
@@ -48,6 +49,14 @@ export function LivestockForm({ onSuccess }: LivestockFormProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: LivestockFormData) => {
+      // Clean up empty strings to avoid database validation errors
+      const cleanData = {
+        ...data,
+        weight: data.weight && data.weight !== "" ? data.weight : undefined,
+        purchasePrice: data.purchasePrice && data.purchasePrice !== "" ? data.purchasePrice : undefined,
+        location: data.location && data.location !== "" ? data.location : undefined,
+        notes: data.notes && data.notes !== "" ? data.notes : undefined,
+      };
       const payload = {
         ...data,
         birthDate: data.birthDate ? new Date(data.birthDate) : null,

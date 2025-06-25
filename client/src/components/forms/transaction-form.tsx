@@ -47,7 +47,16 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: TransactionFormData) => {
-      await apiRequest("POST", "/api/transactions", data);
+      // Clean up data for database
+      const cleanData = {
+        ...data,
+        notes: data.notes && data.notes !== "" ? data.notes : undefined,
+      };
+      return await apiRequest("/api/transactions", {
+        method: "POST",
+        body: JSON.stringify(cleanData),
+        headers: { "Content-Type": "application/json" },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
