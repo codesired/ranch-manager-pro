@@ -36,12 +36,12 @@ export function Sidebar() {
           
           return (
             <Link key={item.path} href={item.path}>
-              <div className={`flex items-center px-6 py-3 text-ranch-beige hover:bg-ranch-light-green transition-colors duration-200 cursor-pointer ${
+              <a className={`flex items-center px-6 py-3 text-ranch-beige hover:bg-ranch-light-green transition-colors duration-200 ${
                 isActive ? "bg-ranch-light-green" : ""
               }`}>
                 <Icon className="mr-3 h-5 w-5" />
                 {item.label}
-              </div>
+              </a>
             </Link>
           );
         })}
