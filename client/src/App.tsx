@@ -12,6 +12,7 @@ import Inventory from "@/pages/inventory";
 import Partners from "@/pages/partners";
 import Reports from "@/pages/reports";
 import Landing from "@/pages/landing";
+import Admin from "@/pages/admin";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -28,6 +29,7 @@ function Router() {
           <Route path="/inventory" component={Inventory} />
           <Route path="/partners" component={Partners} />
           <Route path="/reports" component={Reports} />
+          <Route path="/admin" component={Admin} />
         </>
       )}
       <Route component={NotFound} />
