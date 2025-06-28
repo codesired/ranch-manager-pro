@@ -59,12 +59,21 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  // Check if this is a default admin account
+  const defaultAdminEmails = process.env.DEFAULT_ADMIN_EMAILS?.split(',') || [];
+  const isDefaultAdmin = defaultAdminEmails.includes(claims["email"]);
+  
+  // Get existing user to preserve their current role if they already exist
+  const existingUser = await storage.getUser(claims["sub"]);
+  
   await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
+    // Set role: keep existing role, or set admin for default admins, or partner for new users
+    role: existingUser?.role || (isDefaultAdmin ? 'admin' : 'partner'),
   });
 }
 
