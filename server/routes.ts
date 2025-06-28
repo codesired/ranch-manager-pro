@@ -106,6 +106,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/transactions/:id", isAuthenticated, requireRole(['admin', 'owner', 'partner']), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validatedData = insertTransactionSchema.partial().parse(req.body);
+      const transaction = await storage.updateTransaction(id, validatedData);
+      res.json(transaction);
+    } catch (error: any) {
+      console.error("Error updating transaction:", error);
+      res.status(400).json({ message: "Failed to update transaction", error: error.message });
+    }
+  });
+
   app.delete("/api/transactions/:id", isAuthenticated, requireRole(['admin', 'owner']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -149,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/inventory/:id", async (req, res) => {
+  app.put("/api/inventory/:id", isAuthenticated, requireRole(['admin', 'owner', 'partner']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const validatedData = insertInventorySchema.partial().parse(req.body);

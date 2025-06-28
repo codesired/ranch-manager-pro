@@ -16,70 +16,83 @@ const inventoryFormSchema = insertInventorySchema.extend({
   category: z.string().min(1, "Category is required"),
   quantity: z.string().min(1, "Quantity is required"),
   unit: z.string().min(1, "Unit is required"),
-  minStockLevel: z.string().optional(),
-  costPerUnit: z.string().optional(),
-  supplier: z.string().optional(),
-  location: z.string().optional(),
-  notes: z.string().optional(),
+  minStockLevel: z.string().optional().transform(val => val === "" ? undefined : val),
+  costPerUnit: z.string().optional().transform(val => val === "" ? undefined : val),
+  supplier: z.string().optional().transform(val => val === "" ? undefined : val),
+  location: z.string().optional().transform(val => val === "" ? undefined : val),
+  notes: z.string().optional().transform(val => val === "" ? undefined : val),
+  lastRestocked: z.string().optional().transform(val => val === "" ? undefined : val),
+  expiryDate: z.string().optional().transform(val => val === "" ? undefined : val),
 });
 
 type InventoryFormData = z.infer<typeof inventoryFormSchema>;
 
 interface InventoryFormProps {
   onSuccess?: () => void;
+  editData?: any;
+  isEdit?: boolean;
 }
 
-export function InventoryForm({ onSuccess }: InventoryFormProps) {
+export function InventoryForm({ onSuccess, editData, isEdit }: InventoryFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const formatDateForInput = (date: string | Date | null | undefined) => {
+    if (!date) return "";
+    const d = new Date(date);
+    return d.toISOString().split('T')[0];
+  };
 
   const form = useForm<InventoryFormData>({
     resolver: zodResolver(inventoryFormSchema),
     defaultValues: {
-      name: "",
-      category: "",
-      quantity: "",
-      unit: "",
-      minStockLevel: "",
-      costPerUnit: "",
-      supplier: "",
-      location: "",
-      notes: "",
+      name: editData?.name || "",
+      category: editData?.category || "",
+      quantity: editData?.quantity?.toString() || "",
+      unit: editData?.unit || "",
+      minStockLevel: editData?.minStockLevel?.toString() || "",
+      costPerUnit: editData?.costPerUnit?.toString() || "",
+      supplier: editData?.supplier || "",
+      location: editData?.location || "",
+      notes: editData?.notes || "",
+      lastRestocked: formatDateForInput(editData?.lastRestocked) || "",
+      expiryDate: formatDateForInput(editData?.expiryDate) || "",
     },
   });
 
   const mutation = useMutation({
     mutationFn: async (data: InventoryFormData) => {
-      // Clean up data for database
-      const cleanData = {
+      const payload = {
         ...data,
-        location: data.location && data.location !== "" ? data.location : undefined,
-        notes: data.notes && data.notes !== "" ? data.notes : undefined,
         minStockLevel: data.minStockLevel && data.minStockLevel !== "" ? data.minStockLevel : undefined,
         costPerUnit: data.costPerUnit && data.costPerUnit !== "" ? data.costPerUnit : undefined,
         supplier: data.supplier && data.supplier !== "" ? data.supplier : undefined,
-      };
-      const payload = {
-        ...data,
+        location: data.location && data.location !== "" ? data.location : undefined,
+        notes: data.notes && data.notes !== "" ? data.notes : undefined,
         lastRestocked: data.lastRestocked ? new Date(data.lastRestocked) : null,
         expiryDate: data.expiryDate ? new Date(data.expiryDate) : null,
       };
-      await apiRequest("POST", "/api/inventory", payload);
+      
+      if (isEdit && editData?.id) {
+        await apiRequest("PUT", `/api/inventory/${editData.id}`, payload);
+      } else {
+        await apiRequest("POST", "/api/inventory", payload);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/low-stock"] });
       toast({
         title: "Success",
-        description: "Inventory item added successfully",
+        description: isEdit ? "Inventory item updated successfully" : "Inventory item added successfully",
       });
-      form.reset();
+      if (!isEdit) form.reset();
       onSuccess?.();
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to add inventory item",
+        description: isEdit ? "Failed to update inventory item" : "Failed to add inventory item",
         variant: "destructive",
       });
     },
@@ -259,8 +272,6 @@ export function InventoryForm({ onSuccess }: InventoryFormProps) {
                   <Input 
                     type="date" 
                     {...field}
-                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -278,8 +289,6 @@ export function InventoryForm({ onSuccess }: InventoryFormProps) {
                   <Input 
                     type="date" 
                     {...field}
-                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                   />
                 </FormControl>
                 <FormMessage />
