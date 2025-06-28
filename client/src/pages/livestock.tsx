@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Dog, Plus, Search, Filter } from "lucide-react";
+import { Dog, Plus, Search, Filter, Edit, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { LivestockForm } from "@/components/forms/livestock-form";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,8 @@ import type { Livestock } from "@shared/schema";
 export default function LivestockPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingAnimal, setEditingAnimal] = useState<Livestock | null>(null);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -119,6 +121,23 @@ export default function LivestockPage() {
                       <LivestockForm onSuccess={() => setIsFormOpen(false)} />
                     </DialogContent>
                   </Dialog>
+                  
+                  {/* Edit Dialog */}
+                  <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Edit Livestock - {editingAnimal?.tagId}</DialogTitle>
+                      </DialogHeader>
+                      <LivestockForm 
+                        editData={editingAnimal} 
+                        isEdit={true}
+                        onSuccess={() => {
+                          setIsEditFormOpen(false);
+                          setEditingAnimal(null);
+                        }} 
+                      />
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </div>
             </CardHeader>
@@ -167,13 +186,11 @@ export default function LivestockPage() {
                           size="sm"
                           className="flex-1"
                           onClick={() => {
-                            // TODO: Implement edit functionality
-                            toast({
-                              title: "Edit Feature",
-                              description: "Edit functionality will be implemented soon",
-                            });
+                            setEditingAnimal(animal);
+                            setIsEditFormOpen(true);
                           }}
                         >
+                          <Edit className="h-4 w-4 mr-1" />
                           Edit
                         </Button>
                         <Button
@@ -182,6 +199,7 @@ export default function LivestockPage() {
                           onClick={() => deleteMutation.mutate(animal.id)}
                           disabled={deleteMutation.isPending}
                         >
+                          <Trash2 className="h-4 w-4 mr-1" />
                           Delete
                         </Button>
                       </div>

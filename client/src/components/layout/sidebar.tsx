@@ -1,8 +1,10 @@
 import { Link, useLocation } from "wouter";
-import { Dog, BarChart3, DollarSign, Package, Users, FileText } from "lucide-react";
+import { Dog, BarChart3, DollarSign, Package, Users, FileText, Shield } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Sidebar() {
   const [location] = useLocation();
+  const { user } = useAuth();
 
   const navItems = [
     { path: "/", icon: BarChart3, label: "Dashboard" },
@@ -12,6 +14,11 @@ export function Sidebar() {
     { path: "/partners", icon: Users, label: "Partners" },
     { path: "/reports", icon: FileText, label: "Reports" },
   ];
+
+  // Add admin link for admin/owner users
+  if (user?.role === 'admin' || user?.role === 'owner') {
+    navItems.push({ path: "/admin", icon: Shield, label: "Admin" });
+  }
 
   return (
     <div className="w-64 bg-ranch-green text-white flex-shrink-0 hidden lg:block">

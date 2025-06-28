@@ -35,18 +35,106 @@ export default function ReportsPage() {
     }).format(num);
   };
 
-  const generateReport = (reportType: string) => {
-    toast({
-      title: "Generating Report",
-      description: `${reportType} report will be available for download shortly`,
-    });
+  const generateReport = async (reportType: string) => {
+    try {
+      let endpoint = '';
+      switch (reportType.toLowerCase()) {
+        case 'financial summary':
+        case 'financial':
+          endpoint = '/api/reports/financial';
+          break;
+        case 'livestock report':
+        case 'livestock':
+          endpoint = '/api/reports/livestock';
+          break;
+        case 'inventory report':
+        case 'inventory':
+          endpoint = '/api/reports/inventory';
+          break;
+        default:
+          endpoint = '/api/reports/livestock';
+      }
+      
+      const response = await fetch(endpoint, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate report');
+      }
+      
+      const report = await response.json();
+      
+      // Convert report to JSON blob and download
+      const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${reportType.toLowerCase().replace(' ', '_')}_report_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Report Generated",
+        description: `${reportType} report has been downloaded`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate report",
+        variant: "destructive",
+      });
+    }
   };
 
-  const exportData = (dataType: string) => {
-    toast({
-      title: "Exporting Data",
-      description: `${dataType} data export will begin shortly`,
-    });
+  const exportData = async (dataType: string) => {
+    try {
+      let csvType = '';
+      switch (dataType.toLowerCase()) {
+        case 'livestock':
+          csvType = 'livestock';
+          break;
+        case 'financial':
+          csvType = 'transactions';
+          break;
+        case 'inventory':
+          csvType = 'inventory';
+          break;
+        default:
+          csvType = 'livestock';
+      }
+      
+      const response = await fetch(`/api/export/csv/${csvType}`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to export data');
+      }
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${csvType}_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Data Exported",
+        description: `${dataType} data has been exported to CSV`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to export data",
+        variant: "destructive",
+      });
+    }
   };
 
   // Calculate some basic analytics
