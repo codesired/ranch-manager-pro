@@ -42,7 +42,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/livestock", isAuthenticated, requireRole(['admin', 'owner', 'partner']), async (req, res) => {
     try {
-      const validatedData = insertLivestockSchema.parse(req.body);
+      // Convert date strings to Date objects
+      const processedData = {
+        ...req.body,
+        birthDate: req.body.birthDate ? new Date(req.body.birthDate) : undefined,
+        lastHealthCheck: req.body.lastHealthCheck ? new Date(req.body.lastHealthCheck) : undefined
+      };
+      const validatedData = insertLivestockSchema.parse(processedData);
       const livestock = await storage.createLivestock(validatedData);
       res.json(livestock);
     } catch (error: any) {
@@ -54,7 +60,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/livestock/:id", isAuthenticated, requireRole(['admin', 'owner', 'partner']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertLivestockSchema.partial().parse(req.body);
+      // Convert date strings to Date objects
+      const processedData = {
+        ...req.body,
+        birthDate: req.body.birthDate ? new Date(req.body.birthDate) : undefined,
+        lastHealthCheck: req.body.lastHealthCheck ? new Date(req.body.lastHealthCheck) : undefined
+      };
+      const validatedData = insertLivestockSchema.partial().parse(processedData);
       const livestock = await storage.updateLivestock(id, validatedData);
       res.json(livestock);
     } catch (error: any) {
@@ -97,12 +109,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/transactions", isAuthenticated, requireRole(['admin', 'owner', 'partner']), async (req, res) => {
     try {
-      const validatedData = insertTransactionSchema.parse(req.body);
+      // Convert date string to Date object
+      const processedData = {
+        ...req.body,
+        date: req.body.date ? new Date(req.body.date) : new Date()
+      };
+      const validatedData = insertTransactionSchema.parse(processedData);
       const transaction = await storage.createTransaction(validatedData);
       res.json(transaction);
     } catch (error: any) {
       console.error("Error creating transaction:", error);
       res.status(400).json({ message: "Failed to create transaction", error: error.message });
+    }
+  });
+
+  app.put("/api/transactions/:id", isAuthenticated, requireRole(['admin', 'owner', 'partner']), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      // Convert date string to Date object
+      const processedData = {
+        ...req.body,
+        date: req.body.date ? new Date(req.body.date) : undefined
+      };
+      const validatedData = insertTransactionSchema.partial().parse(processedData);
+      const transaction = await storage.updateTransaction(id, validatedData);
+      res.json(transaction);
+    } catch (error: any) {
+      console.error("Error updating transaction:", error);
+      res.status(400).json({ message: "Failed to update transaction", error: error.message });
     }
   });
 
@@ -140,7 +174,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/inventory", isAuthenticated, requireRole(['admin', 'owner', 'partner']), async (req, res) => {
     try {
-      const validatedData = insertInventorySchema.parse(req.body);
+      // Convert date strings to Date objects
+      const processedData = {
+        ...req.body,
+        lastRestocked: req.body.lastRestocked ? new Date(req.body.lastRestocked) : undefined,
+        expiryDate: req.body.expiryDate ? new Date(req.body.expiryDate) : undefined
+      };
+      const validatedData = insertInventorySchema.parse(processedData);
       const inventory = await storage.createInventory(validatedData);
       res.json(inventory);
     } catch (error: any) {
@@ -149,10 +189,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/inventory/:id", async (req, res) => {
+  app.put("/api/inventory/:id", isAuthenticated, requireRole(['admin', 'owner', 'partner']), async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertInventorySchema.partial().parse(req.body);
+      // Convert date strings to Date objects
+      const processedData = {
+        ...req.body,
+        lastRestocked: req.body.lastRestocked ? new Date(req.body.lastRestocked) : undefined,
+        expiryDate: req.body.expiryDate ? new Date(req.body.expiryDate) : undefined
+      };
+      const validatedData = insertInventorySchema.partial().parse(processedData);
       const inventory = await storage.updateInventory(id, validatedData);
       res.json(inventory);
     } catch (error: any) {
@@ -195,12 +241,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/health-records", isAuthenticated, requireRole(['admin', 'owner', 'partner']), async (req, res) => {
     try {
-      const validatedData = insertHealthRecordSchema.parse(req.body);
+      // Convert date strings to Date objects
+      const processedData = {
+        ...req.body,
+        treatmentDate: req.body.treatmentDate ? new Date(req.body.treatmentDate) : new Date(),
+        nextDueDate: req.body.nextDueDate ? new Date(req.body.nextDueDate) : undefined
+      };
+      const validatedData = insertHealthRecordSchema.parse(processedData);
       const record = await storage.createHealthRecord(validatedData);
       res.json(record);
     } catch (error: any) {
       console.error("Error creating health record:", error);
       res.status(400).json({ message: "Failed to create health record", error: error.message });
+    }
+  });
+
+  // Delete endpoints for inventory
+  app.delete("/api/inventory/:id", isAuthenticated, requireRole(['admin', 'owner']), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteInventory(id);
+      res.json({ message: "Inventory item deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting inventory item:", error);
+      res.status(500).json({ message: "Failed to delete inventory item" });
+    }
+  });
+
+  // Reports and export endpoints
+  app.get("/api/reports/livestock", isAuthenticated, async (req, res) => {
+    try {
+      const livestock = await storage.getAllLivestock();
+      const stats = await storage.getLivestockStats();
+      
+      const report = {
+        summary: stats,
+        data: livestock,
+        generatedAt: new Date(),
+        type: 'livestock'
+      };
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating livestock report:", error);
+      res.status(500).json({ message: "Failed to generate livestock report" });
+    }
+  });
+
+  app.get("/api/reports/financial", isAuthenticated, async (req, res) => {
+    try {
+      const transactions = await storage.getAllTransactions();
+      const summary = await storage.getFinancialSummary();
+      
+      const report = {
+        summary,
+        data: transactions,
+        generatedAt: new Date(),
+        type: 'financial'
+      };
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating financial report:", error);
+      res.status(500).json({ message: "Failed to generate financial report" });
+    }
+  });
+
+  app.get("/api/reports/inventory", isAuthenticated, async (req, res) => {
+    try {
+      const inventory = await storage.getAllInventory();
+      const lowStock = await storage.getLowStockItems();
+      
+      const report = {
+        summary: {
+          totalItems: inventory.length,
+          lowStockItems: lowStock.length,
+          totalValue: inventory.reduce((sum, item) => {
+            const quantity = parseFloat(item.quantity || "0");
+            const cost = parseFloat(item.costPerUnit || "0");
+            return sum + (quantity * cost);
+          }, 0)
+        },
+        data: inventory,
+        lowStockItems: lowStock,
+        generatedAt: new Date(),
+        type: 'inventory'
+      };
+      
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating inventory report:", error);
+      res.status(500).json({ message: "Failed to generate inventory report" });
+    }
+  });
+
+  // Export endpoints
+  app.get("/api/export/csv/:type", isAuthenticated, async (req, res) => {
+    try {
+      const { type } = req.params;
+      let data: any[] = [];
+      let filename = '';
+      
+      switch (type) {
+        case 'livestock':
+          data = await storage.getAllLivestock();
+          filename = 'livestock_export.csv';
+          break;
+        case 'transactions':
+          data = await storage.getAllTransactions();
+          filename = 'transactions_export.csv';
+          break;
+        case 'inventory':
+          data = await storage.getAllInventory();
+          filename = 'inventory_export.csv';
+          break;
+        default:
+          return res.status(400).json({ message: "Invalid export type" });
+      }
+      
+      // Convert to CSV format
+      if (data.length === 0) {
+        return res.status(404).json({ message: "No data to export" });
+      }
+      
+      const headers = Object.keys(data[0]).join(',');
+      const rows = data.map(item => 
+        Object.values(item).map(value => 
+          typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value
+        ).join(',')
+      );
+      
+      const csv = [headers, ...rows].join('\n');
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csv);
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      res.status(500).json({ message: "Failed to export data" });
+    }
+  });
+
+  // Admin control endpoints
+  app.put("/api/admin/users/:id/role", isAuthenticated, requireRole(['owner']), async (req, res) => {
+    try {
+      const userId = req.params.id;
+      const { role } = req.body;
+      
+      if (!['owner', 'admin', 'partner'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      
+      const updatedUser = await storage.upsertUser({ id: userId, role });
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  app.delete("/api/admin/users/:id", isAuthenticated, requireRole(['owner']), async (req, res) => {
+    try {
+      // For safety, we don't actually delete users, just deactivate them
+      const userId = req.params.id;
+      const updatedUser = await storage.upsertUser({ id: userId, isActive: false });
+      res.json({ message: "User deactivated successfully", user: updatedUser });
+    } catch (error) {
+      console.error("Error deactivating user:", error);
+      res.status(500).json({ message: "Failed to deactivate user" });
     }
   });
 

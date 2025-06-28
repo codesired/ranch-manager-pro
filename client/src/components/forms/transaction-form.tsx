@@ -16,30 +16,39 @@ const transactionFormSchema = insertTransactionSchema.extend({
   category: z.string().min(1, "Category is required"),
   description: z.string().min(1, "Description is required"),
   amount: z.string().min(1, "Amount is required"),
-  date: z.date({ required_error: "Date is required" }),
-  notes: z.string().optional(),
+  date: z.string().min(1, "Date is required"),
+  notes: z.string().optional().transform(val => val === "" ? undefined : val),
 });
 
 type TransactionFormData = z.infer<typeof transactionFormSchema>;
 
 interface TransactionFormProps {
   onSuccess?: () => void;
+  editData?: any;
+  isEdit?: boolean;
 }
 
-export function TransactionForm({ onSuccess }: TransactionFormProps) {
+export function TransactionForm({ onSuccess, editData, isEdit }: TransactionFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const formatDateForInput = (date: string | Date | null | undefined) => {
+    if (!date) return new Date().toISOString().split('T')[0];
+    const d = new Date(date);
+    return d.toISOString().split('T')[0];
+  };
 
   const form = useForm<TransactionFormData>({
     resolver: zodResolver(transactionFormSchema),
     defaultValues: {
-      type: "expense",
-      category: "",
-      description: "",
-      amount: "",
-      date: new Date(),
-      notes: "",
-      partnerId: 1, // Default to first partner
+      type: editData?.type || "expense",
+      category: editData?.category || "",
+      description: editData?.description || "",
+      amount: editData?.amount?.toString() || "",
+      date: formatDateForInput(editData?.date),
+      notes: editData?.notes || "",
+      partnerId: editData?.partnerId || undefined,
+      livestockId: editData?.livestockId || undefined,
     },
   });
 
@@ -47,31 +56,32 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: TransactionFormData) => {
-      // Clean up data for database
-      const cleanData = {
+      const payload = {
         ...data,
+        date: new Date(data.date),
         notes: data.notes && data.notes !== "" ? data.notes : undefined,
       };
-      return await apiRequest("/api/transactions", {
-        method: "POST",
-        body: JSON.stringify(cleanData),
-        headers: { "Content-Type": "application/json" },
-      });
+      
+      if (isEdit && editData?.id) {
+        await apiRequest("PUT", `/api/transactions/${editData.id}`, payload);
+      } else {
+        await apiRequest("POST", "/api/transactions", payload);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/transactions"] });
       queryClient.invalidateQueries({ queryKey: ["/api/transactions/summary"] });
       toast({
         title: "Success",
-        description: "Transaction recorded successfully",
+        description: isEdit ? "Transaction updated successfully" : "Transaction recorded successfully",
       });
-      form.reset();
+      if (!isEdit) form.reset();
       onSuccess?.();
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to record transaction",
+        description: isEdit ? "Failed to update transaction" : "Failed to record transaction",
         variant: "destructive",
       });
     },
