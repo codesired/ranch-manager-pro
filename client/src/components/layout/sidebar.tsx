@@ -28,12 +28,12 @@ export function Sidebar() {
           Ranch Manager Pro
         </h1>
       </div>
-      
+
       <nav className="mt-6">
         {navItems.map((item) => {
           const isActive = location === item.path;
           const Icon = item.icon;
-          
+
           return (
             <Link key={item.path} href={item.path}>
               <div className={`flex items-center px-6 py-3 text-ranch-beige hover:bg-ranch-light-green transition-colors duration-200 ${

@@ -11,7 +11,7 @@ export function PartnersStatus() {
     const now = new Date();
     const lastActive = new Date(date);
     const diffInHours = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 2) return "online";
     if (diffInHours < 24) return "recent";
     return "offline";
@@ -32,7 +32,7 @@ export function PartnersStatus() {
     const now = new Date();
     const lastActive = new Date(date);
     const diffInHours = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 1) {
       return "Active now";
     } else if (diffInHours < 24) {
@@ -93,7 +93,7 @@ export function PartnersStatus() {
               </div>
             </div>
           ))}
-          
+
           {partners.length === 0 && (
             <div className="text-center py-4">
               <p className="text-gray-500 text-sm">No partners found</p>

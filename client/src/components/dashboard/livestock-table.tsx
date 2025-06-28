@@ -75,7 +75,7 @@ export function LivestockTable() {
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full" role="table" aria-label="Recent livestock activity">
             <thead>
               <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 <th className="pb-3">ID</th>

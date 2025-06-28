@@ -17,7 +17,7 @@ export function MobileNav() {
         {navItems.map((item) => {
           const isActive = location === item.path;
           const Icon = item.icon;
-          
+
           return (
             <Link key={item.path} href={item.path}>
               <div className={`flex flex-col items-center py-2 px-1 text-ranch-beige ${
