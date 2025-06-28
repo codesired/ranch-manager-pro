@@ -20,64 +20,77 @@ const livestockFormSchema = insertLivestockSchema.extend({
   purchasePrice: z.string().optional().transform(val => val === "" ? undefined : val),
   notes: z.string().optional().transform(val => val === "" ? undefined : val),
   healthStatus: z.enum(["healthy", "monitoring", "sick"]).default("healthy"),
+  birthDate: z.string().optional().transform(val => val === "" ? undefined : val),
+  purchaseDate: z.string().optional().transform(val => val === "" ? undefined : val),
 });
 
 type LivestockFormData = z.infer<typeof livestockFormSchema>;
 
 interface LivestockFormProps {
   onSuccess?: () => void;
+  editData?: any;
+  isEdit?: boolean;
 }
 
-export function LivestockForm({ onSuccess }: LivestockFormProps) {
+export function LivestockForm({ onSuccess, editData, isEdit }: LivestockFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const formatDateForInput = (date: string | Date | null | undefined) => {
+    if (!date) return "";
+    const d = new Date(date);
+    return d.toISOString().split('T')[0];
+  };
 
   const form = useForm<LivestockFormData>({
     resolver: zodResolver(livestockFormSchema),
     defaultValues: {
-      tagId: "",
-      breed: "",
-      gender: "female",
-      weight: "",
-      location: "",
-      purchasePrice: "",
-      notes: "",
-      healthStatus: "healthy",
-      isActive: true,
+      tagId: editData?.tagId || "",
+      breed: editData?.breed || "",
+      gender: editData?.gender || "female",
+      weight: editData?.weight?.toString() || "",
+      location: editData?.location || "",
+      purchasePrice: editData?.purchasePrice?.toString() || "",
+      notes: editData?.notes || "",
+      healthStatus: editData?.healthStatus || "healthy",
+      birthDate: formatDateForInput(editData?.birthDate) || "",
+      purchaseDate: formatDateForInput(editData?.purchaseDate) || "",
+      isActive: editData?.isActive ?? true,
     },
   });
 
   const mutation = useMutation({
     mutationFn: async (data: LivestockFormData) => {
-      // Clean up empty strings to avoid database validation errors
-      const cleanData = {
+      const payload = {
         ...data,
         weight: data.weight && data.weight !== "" ? data.weight : undefined,
         purchasePrice: data.purchasePrice && data.purchasePrice !== "" ? data.purchasePrice : undefined,
         location: data.location && data.location !== "" ? data.location : undefined,
         notes: data.notes && data.notes !== "" ? data.notes : undefined,
-      };
-      const payload = {
-        ...data,
         birthDate: data.birthDate ? new Date(data.birthDate) : null,
         purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : null,
       };
-      await apiRequest("POST", "/api/livestock", payload);
+      
+      if (isEdit && editData?.id) {
+        await apiRequest("PUT", `/api/livestock/${editData.id}`, payload);
+      } else {
+        await apiRequest("POST", "/api/livestock", payload);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/livestock"] });
       queryClient.invalidateQueries({ queryKey: ["/api/livestock/stats"] });
       toast({
         title: "Success",
-        description: "Livestock added successfully",
+        description: isEdit ? "Livestock updated successfully" : "Livestock added successfully",
       });
-      form.reset();
+      if (!isEdit) form.reset();
       onSuccess?.();
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: "Failed to add livestock",
+        description: isEdit ? "Failed to update livestock" : "Failed to add livestock",
         variant: "destructive",
       });
     },
@@ -165,8 +178,6 @@ export function LivestockForm({ onSuccess }: LivestockFormProps) {
                   <Input 
                     type="date" 
                     {...field}
-                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -235,8 +246,6 @@ export function LivestockForm({ onSuccess }: LivestockFormProps) {
                   <Input 
                     type="date" 
                     {...field}
-                    value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
                   />
                 </FormControl>
                 <FormMessage />
@@ -254,7 +263,7 @@ export function LivestockForm({ onSuccess }: LivestockFormProps) {
               <FormControl>
                 <Textarea 
                   placeholder="Additional notes about this animal..."
-                  className="resize-none"
+                  rows={3}
                   {...field}
                 />
               </FormControl>
@@ -263,15 +272,9 @@ export function LivestockForm({ onSuccess }: LivestockFormProps) {
           )}
         />
 
-        <div className="flex gap-3 pt-4">
-          <Button
-            type="submit"
-            disabled={mutation.isPending}
-            className="bg-ranch-green hover:bg-ranch-light-green text-ranch-beige"
-          >
-            {mutation.isPending ? "Adding..." : "Add Livestock"}
-          </Button>
-        </div>
+        <Button type="submit" disabled={mutation.isPending} className="w-full">
+          {mutation.isPending ? (isEdit ? "Updating..." : "Adding...") : (isEdit ? "Update Livestock" : "Add Livestock")}
+        </Button>
       </form>
     </Form>
   );
