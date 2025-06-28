@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DollarSign, Plus, TrendingUp, TrendingDown, Receipt } from "lucide-react";
+import { DollarSign, Plus, TrendingUp, TrendingDown, Receipt, Edit, Trash2 } from "lucide-react";
 import { TransactionForm } from "@/components/forms/transaction-form";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -15,6 +15,8 @@ import type { Transaction } from "@shared/schema";
 
 export default function FinancesPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -172,6 +174,23 @@ export default function FinancesPage() {
                     <TransactionForm onSuccess={() => setIsFormOpen(false)} />
                   </DialogContent>
                 </Dialog>
+                
+                {/* Edit Dialog */}
+                <Dialog open={isEditFormOpen} onOpenChange={setIsEditFormOpen}>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle>Edit Transaction</DialogTitle>
+                    </DialogHeader>
+                    <TransactionForm 
+                      editData={editingTransaction} 
+                      isEdit={true}
+                      onSuccess={() => {
+                        setIsEditFormOpen(false);
+                        setEditingTransaction(null);
+                      }} 
+                    />
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             
@@ -226,14 +245,28 @@ export default function FinancesPage() {
                           </span>
                         </td>
                         <td className="py-4">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => deleteMutation.mutate(transaction.id)}
-                            disabled={deleteMutation.isPending}
-                          >
-                            Delete
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setEditingTransaction(transaction);
+                                setIsEditFormOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteMutation.mutate(transaction.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />
+                              Delete
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
