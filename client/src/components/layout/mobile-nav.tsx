@@ -20,12 +20,12 @@ export function MobileNav() {
           
           return (
             <Link key={item.path} href={item.path}>
-              <a className={`flex flex-col items-center py-2 px-1 text-ranch-beige ${
+              <div className={`flex flex-col items-center py-2 px-1 text-ranch-beige cursor-pointer ${
                 isActive ? "text-white" : ""
               }`}>
                 <Icon className="text-lg h-6 w-6" />
                 <span className="text-xs mt-1">{item.label}</span>
-              </a>
+              </div>
             </Link>
           );
         })}

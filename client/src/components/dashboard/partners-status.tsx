@@ -11,7 +11,7 @@ export function PartnersStatus() {
     const now = new Date();
     const lastActive = new Date(date);
     const diffInHours = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 2) return "online";
     if (diffInHours < 24) return "recent";
     return "offline";
@@ -32,7 +32,7 @@ export function PartnersStatus() {
     const now = new Date();
     const lastActive = new Date(date);
     const diffInHours = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 1) {
       return "Active now";
     } else if (diffInHours < 24) {
@@ -66,6 +66,27 @@ export function PartnersStatus() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Partner Status</h3>
+        <div className="text-center text-red-500">Error loading partners</div>
+      </div>
+    );
+  }
+
+  const partners = data || [];
+
+  // Additional safety check
+  if (!Array.isArray(partners)) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Partner Status</h3>
+        <div className="text-center text-gray-500">No partner data available</div>
+      </div>
+    );
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -73,8 +94,14 @@ export function PartnersStatus() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {partners.slice(0, 4).map((partner: User) => (
-            <div key={partner.id} className="flex items-center space-x-3">
+          {partners.slice(0, 4).map((partner: User) => {
+          // Safety check for each partner object
+          if (!partner || typeof partner !== 'object') {
+            return null;
+          }
+
+          return (
+            <div key={partner.id || Math.random()} className="flex items-center space-x-3">
               <div className="relative">
                 <div className="w-10 h-10 bg-ranch-green rounded-full flex items-center justify-center text-ranch-beige font-semibold">
                   {partner.firstName?.[0] || partner.username?.[0]?.toUpperCase() || partner.email?.[0]?.toUpperCase() || 'U'}
@@ -92,8 +119,9 @@ export function PartnersStatus() {
                 </p>
               </div>
             </div>
-          ))}
-          
+          );
+        })}
+
           {partners.length === 0 && (
             <div className="text-center py-4">
               <p className="text-gray-500 text-sm">No partners found</p>
