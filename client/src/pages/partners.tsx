@@ -1,16 +1,86 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { TopHeader } from "@/components/layout/top-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Clock, Mail, UserCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Users, Clock, Mail, UserCheck, Settings, Shield, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import type { User } from "@shared/schema";
 
 export default function PartnersPage() {
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isAdminDialogOpen, setIsAdminDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
+
   const { data: partners = [], isLoading } = useQuery({
     queryKey: ["/api/partners"],
   });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      await apiRequest("PUT", `/api/admin/users/${userId}/role`, { role });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/partners"] });
+      toast({
+        title: "Success",
+        description: "User role updated successfully",
+      });
+      setIsAdminDialogOpen(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update user role",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deactivateUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await apiRequest("DELETE", `/api/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/partners"] });
+      toast({
+        title: "Success",
+        description: "User deactivated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to deactivate user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const isOwner = currentUser?.role === 'owner';
+  const isAdmin = currentUser?.role === 'admin' || isOwner;
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "owner":
+        return "bg-purple-100 text-purple-800";
+      case "admin":
+        return "bg-blue-100 text-blue-800";
+      case "partner":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   const formatLastActive = (date: string | Date) => {
     const now = new Date();
@@ -48,11 +118,7 @@ export default function PartnersPage() {
     }
   };
 
-  const getRoleColor = (role: string) => {
-    return role === "admin" 
-      ? "bg-ranch-green text-ranch-beige" 
-      : "bg-ranch-beige text-ranch-brown";
-  };
+
 
   if (isLoading) {
     return (
@@ -143,7 +209,7 @@ export default function PartnersPage() {
                       <div className="flex items-center space-x-4 mb-4">
                         <div className="relative">
                           <div className="w-12 h-12 bg-ranch-green rounded-full flex items-center justify-center text-ranch-beige font-semibold text-lg">
-                            {partner.firstName?.[0] || partner.username[0].toUpperCase()}
+                            {partner.firstName?.[0] || partner.email?.[0]?.toUpperCase() || 'U'}
                           </div>
                           <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${getStatusColor(getActivityStatus(partner.lastActiveAt || new Date()))}`}></div>
                         </div>
@@ -151,9 +217,9 @@ export default function PartnersPage() {
                           <h3 className="font-semibold text-lg text-gray-900">
                             {partner.firstName && partner.lastName 
                               ? `${partner.firstName} ${partner.lastName}`
-                              : partner.username}
+                              : partner.email || 'User'}
                           </h3>
-                          <p className="text-gray-600 text-sm">@{partner.username}</p>
+                          <p className="text-gray-600 text-sm">{partner.email}</p>
                         </div>
                       </div>
                       
@@ -189,6 +255,33 @@ export default function PartnersPage() {
                             {partner.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </div>
+                        
+                        {isAdmin && (
+                          <div className="flex gap-2 mt-4 pt-4 border-t">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedUser(partner);
+                                setIsAdminDialogOpen(true);
+                              }}
+                            >
+                              <Settings className="h-4 w-4 mr-1" />
+                              Manage
+                            </Button>
+                            {isOwner && partner.id !== currentUser?.id && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => deactivateUserMutation.mutate(partner.id)}
+                                disabled={deactivateUserMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Deactivate
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -204,6 +297,46 @@ export default function PartnersPage() {
               )}
             </CardContent>
           </Card>
+          
+          {/* Admin Dialog */}
+          {isAdmin && (
+            <Dialog open={isAdminDialogOpen} onOpenChange={setIsAdminDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Manage User - {selectedUser?.firstName || selectedUser?.email}</DialogTitle>
+                </DialogHeader>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Change Role</label>
+                    <Select
+                      defaultValue={selectedUser?.role || 'partner'}
+                      onValueChange={(role) => {
+                        if (selectedUser) {
+                          updateRoleMutation.mutate({ userId: selectedUser.id, role });
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="partner">Partner</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        {isOwner && <SelectItem value="owner">Owner</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600">
+                    <p><strong>Current Role:</strong> {selectedUser?.role || 'partner'}</p>
+                    <p><strong>Status:</strong> {selectedUser?.isActive ? 'Active' : 'Inactive'}</p>
+                    <p><strong>Last Active:</strong> {selectedUser?.lastActiveAt ? formatLastActive(selectedUser.lastActiveAt) : 'Never'}</p>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
     </div>
