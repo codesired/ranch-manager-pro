@@ -67,9 +67,9 @@ export function LivestockTable() {
         <div className="flex justify-between items-center">
           <CardTitle>Recent Livestock Activity</CardTitle>
           <Link href="/livestock">
-            <a className="text-ranch-green hover:text-ranch-light-green text-sm font-medium">
+            <span className="text-ranch-green hover:text-ranch-light-green text-sm font-medium cursor-pointer">
               View All
-            </a>
+            </span>
           </Link>
         </div>
       </CardHeader>
