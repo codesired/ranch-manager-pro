@@ -174,7 +174,25 @@ export default function LivestockPage() {
                           <span className="text-gray-500">Age:</span>
                           <span>
                             {animal.birthDate
-                              ? `${Math.floor((Date.now() - new Date(animal.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} years`
+                              ? (() => {
+                                  const birthDate = new Date(animal.birthDate);
+                                  const now = new Date();
+                                  const diffTime = now.getTime() - birthDate.getTime();
+                                  const diffDays = Math.floor(diffTime / (24 * 60 * 60 * 1000));
+                                  
+                                  if (diffDays < 30) {
+                                    return `${diffDays} days`;
+                                  } else if (diffDays < 365) {
+                                    const months = Math.floor(diffDays / 30);
+                                    return `${months} month${months !== 1 ? 's' : ''}`;
+                                  } else {
+                                    const years = Math.floor(diffDays / 365);
+                                    const remainingMonths = Math.floor((diffDays % 365) / 30);
+                                    return remainingMonths > 0 
+                                      ? `${years}y ${remainingMonths}m`
+                                      : `${years} year${years !== 1 ? 's' : ''}`;
+                                  }
+                                })()
                               : "Unknown"}
                           </span>
                         </div>

@@ -317,16 +317,14 @@ export default function AdminPage() {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-600">Environment</p>
-                        <p className="text-lg font-semibold">{process.env.NODE_ENV}</p>
+                        <p className="text-lg font-semibold">Production</p>
                       </div>
                     </div>
                     
                     <div className="border-t pt-4">
                       <h4 className="font-medium mb-2">Default Admin Emails</h4>
                       <div className="space-y-1">
-                        {process.env.DEFAULT_ADMIN_EMAILS?.split(',').map((email) => (
-                          <p key={email} className="text-sm text-gray-600">{email.trim()}</p>
-                        ))}
+                        <p className="text-sm text-gray-600">Configuration managed server-side</p>
                       </div>
                     </div>
                     

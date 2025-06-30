@@ -124,9 +124,35 @@ export function LivestockForm({ onSuccess, editData, isEdit }: LivestockFormProp
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Breed *</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g., Angus" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select breed" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="Angus">Angus</SelectItem>
+                    <SelectItem value="Hereford">Hereford</SelectItem>
+                    <SelectItem value="Holstein">Holstein</SelectItem>
+                    <SelectItem value="Charolais">Charolais</SelectItem>
+                    <SelectItem value="Limousin">Limousin</SelectItem>
+                    <SelectItem value="Simmental">Simmental</SelectItem>
+                    <SelectItem value="Brahman">Brahman</SelectItem>
+                    <SelectItem value="Texas Longhorn">Texas Longhorn</SelectItem>
+                    <SelectItem value="Gelbvieh">Gelbvieh</SelectItem>
+                    <SelectItem value="Red Angus">Red Angus</SelectItem>
+                    <SelectItem value="Shorthorn">Shorthorn</SelectItem>
+                    <SelectItem value="Wagyu">Wagyu</SelectItem>
+                    <SelectItem value="Highland">Highland</SelectItem>
+                    <SelectItem value="Devon">Devon</SelectItem>
+                    <SelectItem value="Belted Galloway">Belted Galloway</SelectItem>
+                    <SelectItem value="Dexter">Dexter</SelectItem>
+                    <SelectItem value="Jersey">Jersey</SelectItem>
+                    <SelectItem value="Guernsey">Guernsey</SelectItem>
+                    <SelectItem value="Mixed/Crossbred">Mixed/Crossbred</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

@@ -46,6 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processedData = {
         ...req.body,
         birthDate: req.body.birthDate ? new Date(req.body.birthDate) : undefined,
+        purchaseDate: req.body.purchaseDate ? new Date(req.body.purchaseDate) : undefined,
         lastHealthCheck: req.body.lastHealthCheck ? new Date(req.body.lastHealthCheck) : undefined
       };
       const validatedData = insertLivestockSchema.parse(processedData);
@@ -64,6 +65,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const processedData = {
         ...req.body,
         birthDate: req.body.birthDate ? new Date(req.body.birthDate) : undefined,
+        purchaseDate: req.body.purchaseDate ? new Date(req.body.purchaseDate) : undefined,
         lastHealthCheck: req.body.lastHealthCheck ? new Date(req.body.lastHealthCheck) : undefined
       };
       const validatedData = insertLivestockSchema.partial().parse(processedData);
