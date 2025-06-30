@@ -11,7 +11,7 @@ export function PartnersStatus() {
     const now = new Date();
     const lastActive = new Date(date);
     const diffInHours = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 2) return "online";
     if (diffInHours < 24) return "recent";
     return "offline";
@@ -32,7 +32,7 @@ export function PartnersStatus() {
     const now = new Date();
     const lastActive = new Date(date);
     const diffInHours = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 1) {
       return "Active now";
     } else if (diffInHours < 24) {
@@ -77,7 +77,7 @@ export function PartnersStatus() {
             <div key={partner.id} className="flex items-center space-x-3">
               <div className="relative">
                 <div className="w-10 h-10 bg-ranch-green rounded-full flex items-center justify-center text-ranch-beige font-semibold">
-                  {partner.firstName?.[0] || partner.username[0].toUpperCase()}
+                  {partner.firstName?.[0] || partner.username?.[0]?.toUpperCase() || partner.email?.[0]?.toUpperCase() || 'U'}
                 </div>
                 <div className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${getStatusColor(getActivityStatus(partner.lastActiveAt || new Date()))}`}></div>
               </div>
@@ -85,7 +85,7 @@ export function PartnersStatus() {
                 <p className="text-sm font-medium text-gray-900">
                   {partner.firstName && partner.lastName 
                     ? `${partner.firstName} ${partner.lastName}`
-                    : partner.username}
+                    : partner.username || partner.email || 'Unknown User'}
                 </p>
                 <p className="text-xs text-gray-500">
                   {formatLastActive(partner.lastActiveAt || new Date())}
@@ -93,7 +93,7 @@ export function PartnersStatus() {
               </div>
             </div>
           ))}
-          
+
           {partners.length === 0 && (
             <div className="text-center py-4">
               <p className="text-gray-500 text-sm">No partners found</p>

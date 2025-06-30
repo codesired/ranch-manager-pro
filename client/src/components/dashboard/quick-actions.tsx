@@ -106,6 +106,7 @@ export function QuickActions() {
                   variant="outline"
                   className={`w-full justify-start p-3 h-auto ${colors.hover} hover:text-white transition-colors duration-200 group`}
                   onClick={() => handleActionClick(action.id)}
+                  aria-label={`${action.label} - Quick action`}
                 >
                   <Icon className={`mr-3 h-5 w-5 ${colors.text} ${colors.group}`} />
                   <span className="text-sm font-medium">{action.label}</span>
